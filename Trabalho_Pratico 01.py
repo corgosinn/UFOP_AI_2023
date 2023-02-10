@@ -4,7 +4,7 @@
 """
 Inteligência Artificial - CSI457
 Thiago Corgosinho Silva 20.2.8117
-Ruan Tiengo Rocha
+Ruan Tiengo Rocha 19.2.8050
 """
 
 #!/usr/bin/env python3
@@ -15,7 +15,7 @@ import time
 from os import system
 
 """
-Um versão simples do algoritmo MINIMAX para o Jogo da Velha.
+Trabalho prático 1
 """
 
 # Representando a variável que identifica cada jogador
@@ -28,6 +28,8 @@ COMP = +1
 
 numero_de_ratos = 6
 numero_de_gatos = 1
+pos_gato = [7,3]
+pos_ratos = [ [1, 0],[1, 1],[1, 2],[1, 5],[1, 6],[1, 7] ]
 
 tabuleiro = [
     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -40,10 +42,11 @@ tabuleiro = [
     [0, 0, 0, -1, 0, 0, 0, 0],
 ]
 
+
 """
 Funcao para avaliacao heuristica do estado.
 :parametro (estado): o estado atual do tabuleiro
-:returna: +1 se o computador vence; -1 se o HUMANOo vence; 0 empate
+:returna: +1 se o computador vence; -1 se o HUMANOo vence;
  """
 
 
@@ -74,13 +77,13 @@ def vitoria(estado, jogador):
         if jogador in win_estado:
             return True
         # Se capturaram o gato, os ratos vencem
-        elif numero_de_gatos == 0:
+        elif numero_de_gatos == 0: # se capturarem o rato
             return True
         else:
             return False
     else:
         # Se o gato capturou todos os ratos
-        if numero_de_ratos == 0:
+        if numero_de_ratos == 0: 
             return True
         else:
             return False
@@ -106,76 +109,91 @@ ainda permitidas para próximas jogadas.
 """
 
 
-def celulas_vazias(estado):
+def jogadas_possiveis_gato(estado):
+    moves = []
+    row = pos_gato[0]
+    col = pos_gato[1]
+    # movimentos para frente
+    i = row + 1
+    while i < len(estado) and estado[i][col] >= 0:
+        if estado[i][col] > 0:
+            break
+        moves.append((i, col))
+        i = i + 1
+
+    # movimentos para trás
+    i = row - 1
+    while i >= 0 and estado[i][col] >= 0:
+        if estado[i][col] > 0:
+            break
+        moves.append((i, col))
+        i = i - 1
+
+    # movimentos para a esquerda
+    j = col - 1
+    while j >= 0 and estado[row][j] >= 0:
+        if estado[row][j] > 0:
+            break
+        moves.append((row, j))
+        j = j - 1
+
+    # movimentos para a direita
+    j = col + 1
+    while j < len(estado[0]) and estado[row][j] >= 0:
+        if estado[row][j] > 0:
+            break
+        moves.append((row, j))
+        j = j + 1
+
+    return moves
+
+def jogadas_possiveis_ratos(estado):
     celulas = []
     for x, row in enumerate(estado):
         for y, cell in enumerate(row):
             if cell == 0:
                 celulas.append([x, y])
+
     return celulas
 
 
-""" ---------------------------------------------------------- """
 
-"""
-Um movimento é valido se a célula escolhida está vazia.
-:param (x): coordenada X
-:param (y): coordenada Y
-:return: True se o tabuleiro[x][y] está vazio
-"""
-
-
-def movimento_valido(x, y):
-    if [x, y] in celulas_vazias(tabuleiro):
-        return True
+def movimento_valido(x, y, jogador):
+    if jogador == "G":
+        if [x, y] in jogadas_possiveis_gato(tabuleiro,jogador):
+            return True
+        else:
+            return False    
     else:
-        return False
-
-
-""" ---------------------------------------------------------- """
-
-"""
-Executa o movimento no tabuleiro se as coordenadas são válidas
-:param (x): coordenadas X
-:param (y): coordenadas Y
-:param (jogador): o jogador da vez
-"""
-
-
+        if [x, y] in jogadas_possiveis_ratos(tabuleiro,jogador):
+            return True
+        else:
+            return False    
+        
 def exec_movimento(x, y, jogador):
-    if movimento_valido(x, y):
+    if movimento_valido(x, y,jogador):
+        
         tabuleiro[x][y] = jogador
         return True
     else:
         return False
 
 
-""" ---------------------------------------------------------- """
-
-"""
-Função da IA que escolhe o melhor movimento
-:param (estado): estado atual do tabuleiro
-:param (profundidade): índice do nó na árvore (0 <= profundidade <= 9),
-mas nunca será nove neste caso (veja a função iavez())
-:param (jogador): um HUMANO ou um Computador
-:return: uma lista com [melhor linha, melhor coluna, melhor placar]
-"""
-
-
 def minimax(estado, profundidade, jogador):
-
-    # valor-minmax(estado)
+    # Valor minmax(estado)
     if jogador == COMP:
         melhor = [-1, -1, -infinity]
     else:
         melhor = [-1, -1, +infinity]
-
-    # valor-minimax(estado) = avaliacao(estado)
+    # Valor minimax(estado) = avaliacao(estado)
     if profundidade == 0 or fim_jogo(estado):
         placar = avaliacao(estado)
         return [-1, -1, placar]
-
-    for cell in celulas_vazias(estado):
+    if jogador == COMP:
+        jogadas = jogadas_possiveis_gato(estado)
+    else:
+        jogadas = jogadas_possiveis_ratos(estado)
+    for cell in jogadas:
         x, y = cell[0], cell[1]
         estado[x][y] = jogador
         placar = minimax(estado, profundidade - 1, -jogador)
@@ -191,13 +209,6 @@ def minimax(estado, profundidade, jogador):
     return melhor
 
 
-""" ---------------------------------------------------------- """
-
-"""
-Limpa o console para SO Windows
-"""
-
-
 def limpa_console():
     os_name = platform.system().lower()
     if 'windows' in os_name:
@@ -206,26 +217,13 @@ def limpa_console():
         system('clear')
 
 
-""" ---------------------------------------------------------- """
-
-"""
-Imprime o tabuleiro no console
-:param. (estado): estado atual do tabuleiro
-"""
-
 
 def exibe_tabuleiro(estado, comp_escolha, humano_escolha):
-    print('----------------')
-    for row in estado:
-        print('\n----------------')
-        for cell in row:
-            if cell == +1:
-                print('|', comp_escolha, '|', end='')
-            elif cell == -1:
-                print('|', humano_escolha, '|', end='')
-            else:
-                print('|', ' ', '|', end='')
-    print('\n----------------')
+    for x, row in enumerate(estado):
+        for y, cell in enumerate(row):
+            print(f"{estado[x][y]}",end=' ')
+        print()
+    
 
 
 """ ---------------------------------------------------------- """
@@ -240,20 +238,16 @@ ou escolhe uma coordenada aleatória.
 
 
 def IA_vez(comp_escolha, humano_escolha):
-    profundidade = len(celulas_vazias(tabuleiro))
-    if profundidade == 0 or fim_jogo(tabuleiro):
+    profundidade = len(jogadas_possiveis_gato(tabuleiro))
+    if fim_jogo(tabuleiro):
         return
 
     limpa_console()
     print('Vez do Computador [{}]'.format(comp_escolha))
     exibe_tabuleiro(tabuleiro, comp_escolha, humano_escolha)
 
-    if profundidade == 9:
-        x = choice([0, 1, 2])
-        y = choice([0, 1, 2])
-    else:
-        move = minimax(tabuleiro, profundidade, COMP)
-        x, y = move[0], move[1]
+    move = minimax(tabuleiro, profundidade, COMP)
+    x, y = move[0], move[1]
 
     exec_movimento(x, y, COMP)
     time.sleep(1)
@@ -263,14 +257,7 @@ def IA_vez(comp_escolha, humano_escolha):
 
 
 def HUMANO_vez(comp_escolha, humano_escolha):
-    """
-    O HUMANO joga escolhendo um movimento válido
-    :param comp_escolha: Computador escolhe X ou O
-    :param humano_escolha: HUMANO escolhe X ou O
-    :return:
-    """
-    profundidade = len(celulas_vazias(tabuleiro))
-    if profundidade == 0 or fim_jogo(tabuleiro):
+    if fim_jogo(tabuleiro):
         return
 
     # Dicionário de movimentos válidos
@@ -284,9 +271,7 @@ def HUMANO_vez(comp_escolha, humano_escolha):
         41: [5, 0], 42: [5, 1], 43: [5, 2], 44: [5, 3], 45: [5, 4], 46: [5, 5], 47: [5, 6], 48: [5, 7],
         49: [6, 0], 50: [6, 1], 51: [6, 2], 52: [6, 3], 53: [6, 4], 54: [6, 5], 55: [6, 6], 56: [6, 7],
         57: [7, 0], 58: [7, 1], 59: [7, 2], 60: [7, 3], 61: [7, 4], 62: [7, 5], 63: [7, 6], 64: [7, 7],
-
     }
-
     limpa_console()
     print('Vez do HUMANO [{}]'.format(humano_escolha))
     exibe_tabuleiro(tabuleiro, comp_escolha, humano_escolha)
@@ -306,27 +291,17 @@ def HUMANO_vez(comp_escolha, humano_escolha):
         except:
             print('Escolha Inválida!')
 
-
-""" ---------------------------------------------------------- """
-
-"""
-Funcao Principal que chama todas funcoes
-"""
-
-
 def main():
-
     limpa_console()
     humano_escolha = 'G'  # Pode ser Rato ou Gato
     comp_escolha = 'R'  # Pode ser Rato ou Gato
     primeiro = 'S'  # S se HUMANO primeiro e N caso o computador é o primeiro
 
     # Laço principal do jogo
-    while len(celulas_vazias(tabuleiro)) > 0 and not fim_jogo(tabuleiro):
+    while not fim_jogo(tabuleiro):
         if primeiro == 'N':
             IA_vez(comp_escolha, humano_escolha)
             primeiro = ''
-
         HUMANO_vez(comp_escolha, humano_escolha)
         IA_vez(comp_escolha, humano_escolha)
 
@@ -341,11 +316,6 @@ def main():
         print('Vez do Computador [{}]'.format(comp_escolha))
         exibe_tabuleiro(tabuleiro, comp_escolha, humano_escolha)
         print('Você Perdeu!')
-    else:
-        limpa_console()
-        exibe_tabuleiro(tabuleiro, comp_escolha, humano_escolha)
-        print('Empate!')
-
     exit()
 
 
