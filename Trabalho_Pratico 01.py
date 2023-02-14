@@ -42,14 +42,33 @@ tabuleiro = [
 ]
 
 
-def avaliacao(estado):
-
-    if vitoria(estado, COMP):
-        placar = +1
+def avaliacao_heuristica(estado):
+    placar = 0
+    # definimos alguns valores de melhores casas
+    valores = [[-120, 20, -20, -5, -5, -20, 20, -120],
+    [-20, -40, -5, -5, -5, -5, -40, -20],
+    [-20, -5, -15, 3, 3, -15, 5, -20],
+    [-50, -5, 3, 5, 6, -3, 5, -5],
+    [-5, -5, 3, 3, 3, 3, 5, -5],
+    [-20, -5, -15, -3, -3, -15, 5, -20],
+    [-20, -40, -5, -5, -5, -5, -40, -20],
+    [120, 40, 20, 5, 5, 20, 40, 120]]
+    # verificamos se o gato ta no tabuleiro com a flag
+    flag_gato = True
+    
+    for i in range(8):
+        for j in range(8):
+            # se o gato tiver no tabuleiro ele perde a flag
+            if estado[i][j] == -1:
+                flag_gato = False
+            if estado[i][j] == 1:
+                placar += valores[i][j]
+            elif estado[i][j] != 0:
+                placar -= valores[i][j]
+    if vitoria(estado, COMP) or flag_gato:
+        placar = +300
     elif vitoria(estado, HUMANO):
-        placar = -1
-    else:
-        placar = 0
+        placar = -300
 
     return placar
 
@@ -124,7 +143,10 @@ def jogadas_possiveis_gato(estado):
 def jogadas_possiveis_ratos(estado):
     jogadas = []
     for numero_rato in pos_ratos.keys():
-        jogadas.append(jogadas_possiveis_rato(estado, pos_ratos[numero_rato]))
+        if(pos_ratos.get(numero_rato)[0] == -1 and pos_ratos.get(numero_rato)[1] == -1):
+            jogadas.append([])
+        else:
+            jogadas.append(jogadas_possiveis_rato(estado, pos_ratos[numero_rato]))
     return jogadas
 
 
@@ -143,12 +165,12 @@ def jogadas_possiveis_rato(estado, rato):
             if estado[linha+1][coluna + 1] == -1:
                 celulas.append([linha + 1, coluna + 1])
     # Se o movemento a frente está livre
-        if estado[linha+1][coluna] <= 0:
+        if estado[linha+1][coluna] == 0:
             celulas.append([linha + 1, coluna])
     # Primeiro movimento do rato pode ser 2 linhas
 
     if linha + 2 <= 7 and linha == 1:
-        if estado[linha + 2][coluna] <= 0:
+        if estado[linha + 2][coluna] == 0 and estado[linha + 1][coluna] == 0:
             celulas.append([linha + 2, coluna])
     return celulas
 
@@ -169,6 +191,11 @@ def movimento_valido(x, y, jogador):
         else:
             return False
 
+def getRato(x,y):
+    for idx,rato in enumerate(pos_ratos.values()):
+        if rato[0] == x and rato[1] == y:
+            return idx
+    return -1
 
 def exec_movimento(x, y, jogador):
     if movimento_valido(x, y, jogador):
@@ -176,21 +203,25 @@ def exec_movimento(x, y, jogador):
             if (tabuleiro[x][y] == 1):
                 global numero_de_ratos
                 numero_de_ratos = numero_de_ratos - 1
+                indice_rato_morto = getRato(x,y)
+                pos_ratos.update({indice_rato_morto + 1: [-1,-1] })
+            
             tabuleiro[pos_gato[0]][pos_gato[1]] = 0
             tabuleiro[x][y] = -1
             pos_gato[0] = x
-            pos_gato[1] = y
+            pos_gato[1] = y         
         else:
             if (tabuleiro[x][y] == -1):
                 global numero_de_gatos
                 numero_de_gatos = numero_de_gatos - 1
             # Linha e coluna da posição antiga do rato
-            linha_rato, coluna_rato = pos_ratos.get(rato_movimentando+ 1)[0],  pos_ratos.get(rato_movimentando+ 1)[1]
+            linha_rato, coluna_rato = pos_ratos.get(rato_movimentando + 1)[0],  pos_ratos.get(rato_movimentando + 1)[1]
             # Seta a antiga posição como 0
             tabuleiro[linha_rato][coluna_rato] = 0
             # Atualiza a nova posição
             pos_ratos.update({rato_movimentando + 1: [x,y]})
             tabuleiro[x][y] = 1
+            print()
         
         return True
     else:
@@ -203,19 +234,24 @@ def minimax(estado, profundidade, jogador):
         melhor = [-1, -1, -infinity]
     else:
         melhor = [-1, -1, +infinity]
-    # Valor minimax(estado) = avaliacao(estado)
+    # Valor minimax(estado) = avaliacao_heuristica(estado)
     if profundidade == 0 or fim_jogo(estado):
-        placar = avaliacao(estado)
+        placar = avaliacao_heuristica(estado)
         return [-1, -1, placar]
-    if jogador == COMP:
+    if jogador == -1:
         jogadas = jogadas_possiveis_gato(estado)
+        global numero_de_ratos
         for cell in jogadas:
             x = cell[0]
             y = cell[1]
             temp = estado[x][y]
+            if estado[x][y] == 1:
+                numero_de_ratos = numero_de_ratos - 1
             estado[x][y] = jogador
             placar = minimax(estado, profundidade - 1, -jogador)
             estado[x][y] = temp
+            if estado[x][y] == 1:
+                numero_de_ratos = numero_de_ratos + 1
             placar[0], placar[1] = x, y
 
             if jogador == COMP:
@@ -226,13 +262,19 @@ def minimax(estado, profundidade, jogador):
                     melhor = placar  # valor MIN
     else:
         jogadas = jogadas_possiveis_ratos(estado)
+        global numero_de_gatos
         for indice_rato, jogadas_possiveis in enumerate(jogadas):
             for cell in jogadas_possiveis:
                 x = cell[0]
                 y = cell[1]
+                temp = estado[x][y]
+                if estado[x][y] == -1:
+                    numero_de_gatos = numero_de_gatos - 1
                 estado[x][y] = jogador
                 placar = minimax(estado, profundidade - 1, -jogador)
-                estado[x][y] = 0
+                estado[x][y] = temp
+                if estado[x][y] == -1:
+                    numero_de_gatos = numero_de_gatos + 1
                 placar[0], placar[1] = x, y
 
                 if jogador == COMP:
@@ -246,10 +288,10 @@ def minimax(estado, profundidade, jogador):
 
 def limpa_console():
     os_name = platform.system().lower()
-    if 'windows' in os_name:
-        system('cls')
-    else:
-        system('clear')
+    # if 'windows' in os_name:
+    #     system('cls')
+    # else:
+    #     system('clear')
 
 
 def exibe_tabuleiro(estado, comp_escolha, humano_escolha):
@@ -257,18 +299,21 @@ def exibe_tabuleiro(estado, comp_escolha, humano_escolha):
         for y, cell in enumerate(row):
             print(f"{estado[x][y]}", end=' ')
         print()
+    print()
 
 
 def IA_vez(comp_escolha, humano_escolha):
-    profundidade = 3
+    profundidade = 6
     if fim_jogo(tabuleiro):
         return
 
-    # limpa_console()
+    limpa_console()
     print('Vez do Computador [{}]'.format(comp_escolha))
     exibe_tabuleiro(tabuleiro, comp_escolha, humano_escolha)
 
     move = minimax(tabuleiro, profundidade, COMP)
+    print("BOT: ")
+    print(move)
     x, y = move[0], move[1]
 
     exec_movimento(x, y, COMP)
@@ -285,7 +330,7 @@ def HUMANO_vez(comp_escolha, humano_escolha):
     # Dicionário de movimentos válidos
     linha = -1
     coluna = -1
-    # limpa_console()
+    limpa_console()
     print('Vez do HUMANO [{}]'.format(humano_escolha))
     exibe_tabuleiro(tabuleiro, comp_escolha, humano_escolha)
 
@@ -309,7 +354,7 @@ def HUMANO_vez(comp_escolha, humano_escolha):
 
 
 def main():
-    # limpa_console()
+    limpa_console()
     humano_escolha = 'G'  # Pode ser Rato ou Gato
     comp_escolha = 'R'  # Pode ser Rato ou Gato
     primeiro = 'S'  # S se HUMANO primeiro e N caso o computador é o primeiro
@@ -324,7 +369,7 @@ def main():
 
     # Mensagem de Final de jogo
     if vitoria(tabuleiro, HUMANO):
-        limpa_console()
+        limpa_console();
         print('Vez do HUMANO [{}]'.format(humano_escolha))
         exibe_tabuleiro(tabuleiro, comp_escolha, humano_escolha)
         print('Você Venceu!')
