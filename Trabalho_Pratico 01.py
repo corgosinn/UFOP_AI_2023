@@ -2,21 +2,19 @@
 # -*- codificacao: utf-8 -*-
 
 """
+Trabalho Prático 1
 Inteligência Artificial - CSI457
 Thiago Corgosinho Silva 20.2.8117
 Ruan Tiengo Rocha 19.2.8050
 """
 
-#!/usr/bin/env python3
+
 from math import inf as infinity
 from random import choice
 import platform
 import time
 from os import system
 
-"""
-Trabalho prático 1
-"""
 
 # Representando a variável que identifica cada jogador
 # HUMANO = Oponente humano
@@ -28,6 +26,7 @@ COMP = +1
 
 numero_de_ratos = 6
 numero_de_gatos = 1
+rato_movimentando = -1
 pos_gato = [7, 3]
 pos_ratos = {1: [1, 0], 2: [1, 1], 3: [1, 2], 4: [1, 5], 5: [1, 6], 6: [1, 7]}
 
@@ -43,13 +42,6 @@ tabuleiro = [
 ]
 
 
-"""
-Funcao para avaliacao heuristica do estado.
-:parametro (estado): o estado atual do tabuleiro
-:returna: +1 se o computador vence; -1 se o HUMANOo vence;
- """
-
-
 def avaliacao(estado):
 
     if vitoria(estado, COMP):
@@ -60,9 +52,6 @@ def avaliacao(estado):
         placar = 0
 
     return placar
-
-
-""" fim avaliacao (estado)------------------------------------- """
 
 
 def vitoria(estado, jogador):
@@ -89,24 +78,8 @@ def vitoria(estado, jogador):
             return False
 
 
-""" ---------------------------------------------------------- """
-
-"""
-Testa fim de jogo para ambos jogadores de acordo com estado atual
-return: será fim de jogo caso ocorra vitória de um dos jogadores.
-"""
-
-
 def fim_jogo(estado):
     return vitoria(estado, HUMANO) or vitoria(estado, COMP)
-
-
-""" ---------------------------------------------------------- """
-
-"""
-Verifica celular vazias e insere na lista para informar posições
-ainda permitidas para próximas jogadas.
-"""
 
 
 def jogadas_possiveis_gato(estado):
@@ -114,49 +87,38 @@ def jogadas_possiveis_gato(estado):
     row = pos_gato[0]
     col = pos_gato[1]
     # movimentos para frente
-    print("Entra nas jogados possiveis do gato")
     i = row + 1
     while i < len(estado) and estado[i][col] >= 0:
+        moves.append((i, col))
         if estado[i][col] > 0:
             break
-        moves.append((i, col))
         i = i + 1
 
     # movimentos para trás
     i = row - 1
     while i >= 0 and estado[i][col] >= 0:
+        moves.append((i, col))
         if estado[i][col] > 0:
             break
-        moves.append((i, col))
         i = i - 1
 
     # movimentos para a esquerda
     j = col - 1
     while j >= 0 and estado[row][j] >= 0:
+        moves.append((row, j))
         if estado[row][j] > 0:
             break
-        moves.append((row, j))
         j = j - 1
 
     # movimentos para a direita
     j = col + 1
     while j < len(estado[0]) and estado[row][j] >= 0:
+        moves.append((row, j))
         if estado[row][j] > 0:
             break
-        moves.append((row, j))
         j = j + 1
 
     return moves
-
-#     [0, 0, 0, 0, 0, 0, 0, 0],
-#     [1, 1, 1, 0, 0, 1, 1, 1],
-#     [0, 0, 0, 0, 0, 0, 0, 0],
-#     [0, 0, 0, 0, 0, 0, 0, 0],
-#     [0, 0, 0, 0, 0, 0, 0, 0],
-#     [0, 0, 0, 0, 0, 0, 0, 0],
-#     [0, 0, 0, 0, 0, 0, 0, 0],
-#     [0, 0, 0, -1, 0, 0, 0, 0],
-#
 
 
 def jogadas_possiveis_ratos(estado):
@@ -193,25 +155,26 @@ def jogadas_possiveis_rato(estado, rato):
 
 def movimento_valido(x, y, jogador):
     if jogador == -1:
-        print("entrei")
-        print(f"JOGADAS GATO: {jogadas_possiveis_gato(tabuleiro)}")
         if (x, y) in jogadas_possiveis_gato(tabuleiro):
             return True
         else:
             return False
     else:
-        print(f"JOGADAS RATO: {jogadas_possiveis_gato(tabuleiro,jogador)}")
-        if [x, y] in jogadas_possiveis_ratos(tabuleiro, jogador):
-            return True
+        jogadas_todos_os_ratos =  jogadas_possiveis_ratos(tabuleiro)
+        for index, cood_rato in enumerate(jogadas_todos_os_ratos):
+            if [x, y] in cood_rato:
+                global rato_movimentando
+                rato_movimentando = index
+                return True
         else:
             return False
 
 
 def exec_movimento(x, y, jogador):
     if movimento_valido(x, y, jogador):
-        print("movimento valido")
         if (jogador == -1):
             if (tabuleiro[x][y] == 1):
+                global numero_de_ratos
                 numero_de_ratos = numero_de_ratos - 1
             tabuleiro[pos_gato[0]][pos_gato[1]] = 0
             tabuleiro[x][y] = -1
@@ -219,13 +182,18 @@ def exec_movimento(x, y, jogador):
             pos_gato[1] = y
         else:
             if (tabuleiro[x][y] == -1):
+                global numero_de_gatos
                 numero_de_gatos = numero_de_gatos - 1
+            # Linha e coluna da posição antiga do rato
+            linha_rato, coluna_rato = pos_ratos.get(rato_movimentando+ 1)[0],  pos_ratos.get(rato_movimentando+ 1)[1]
+            # Seta a antiga posição como 0
+            tabuleiro[linha_rato][coluna_rato] = 0
+            # Atualiza a nova posição
+            pos_ratos.update({rato_movimentando + 1: [x,y]})
             tabuleiro[x][y] = 1
-
-        tabuleiro[x][y] = jogador
+        
         return True
     else:
-        print("movimento invalido")
         return False
 
 
@@ -244,9 +212,10 @@ def minimax(estado, profundidade, jogador):
         for cell in jogadas:
             x = cell[0]
             y = cell[1]
+            temp = estado[x][y]
             estado[x][y] = jogador
             placar = minimax(estado, profundidade - 1, -jogador)
-            estado[x][y] = 0
+            estado[x][y] = temp
             placar[0], placar[1] = x, y
 
             if jogador == COMP:
@@ -291,7 +260,7 @@ def exibe_tabuleiro(estado, comp_escolha, humano_escolha):
 
 
 def IA_vez(comp_escolha, humano_escolha):
-    profundidade = len(jogadas_possiveis_gato(tabuleiro))
+    profundidade = 3
     if fim_jogo(tabuleiro):
         return
 
