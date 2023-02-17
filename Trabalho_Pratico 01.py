@@ -39,34 +39,48 @@ tabuleiro = [
     [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, -1, 0, 0, 0, 0],
 ]
+# Função usada na heuristica pra ver se o rato ta protejido, se tiver retorna True
 
+def rato_protegido(rato_pos, pos_ratos):
+    for outro_rato_pos in pos_ratos.values():
+        if outro_rato_pos != rato_pos and abs(outro_rato_pos[0] - rato_pos[0]) == 1 and abs(outro_rato_pos[1] - rato_pos[1]) == 1:
+            return True
+    return False
 
 def avaliacao_heuristica(estado):
     placar = 0
     # definimos alguns valores de melhores casas
-    valores = [ [-120, 20, -20, -5,  -5, -20,  20, -120],
-                [-20, -40, -5,  -5,  -5,  -5, -40,  -20],
-                [-20, -5,  -15,  3,   3, -15,   5,  -20],
-                [-50, -5,  70,  50,  50,  70,  50,   -5],
-                [-5,  -5,  70,  70,  70,  70,  50,   -5],
-                [-20, -5,  15,  70,  70,  70,  -5,  -20],
-                [-20, -40, -5,  -5,  -5,  -5, -40,  -20],
-                [120, 40,  20,   5,   5,  20,  40,  120]]
+    valores = [ [0, 0, 0, 0, 0, 0, 0, 0],
+                [1, 1, 1, 1, 1, 1, 1, 1],
+                [2, 2, 3, 3, 3, 3, 2, 2],
+                [2, 3, 4, 5, 5, 4, 3, 2],
+                [3, 4, 4, 5, 5, 4, 4, 3],
+                [3, 4, 5, 5, 5, 5, 4, 3],
+                [4, 5, 6, 6, 6, 6, 5, 4],
+                [6, 6, 6, 6, 6, 6, 6, 6]]
     # verificamos se o gato ta no tabuleiro com a flag
-    flag_gato = True
+    flag_gato_morto = True
+    contador_ratos = 0
     for i in range(8):
         for j in range(8):
             # se o gato tiver no tabuleiro ele perde a flag
             if estado[i][j] == -1:
-                flag_gato = False
+                flag_gato_morto = False
             if estado[i][j] == 1:
+                # Adicionamos pontos para ratos protejidos ( na diagonal )
+                if rato_protegido([i, j], pos_ratos):
+                    placar += 1.2
                 placar += valores[i][j]
+                contador_ratos = contador_ratos + 1
             elif estado[i][j] != 0:
                 placar -= valores[i][j]
-    if vitoria(estado, COMP) or flag_gato:
-        placar = +1000
+    # Para cada rato vivo ele adiciona pontos
+    placar += (contador_ratos * 0.6)
+    # A vitoria adiciona 10 pontos
+    if vitoria(estado, COMP) or flag_gato_morto:
+        placar = +10
     elif vitoria(estado, HUMANO):
-        placar = -1000
+        placar = -10
 
     return placar
 
